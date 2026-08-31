@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PromptLoom — a notebook for system prompts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F5F8FC;
+    --rail:#EFF4FA;
+    --page:#FFFFFF;
+    --ink:#16202B;
+    --ink-soft:#4A5A6B;
+    --muted:#8494A8;
+    --accent:#3B6EA5;
+    --accent-deep:#2A4E76;
+    --accent-soft:#E4EEF8;
+    --rule:#E9EFF6;
+    --border:#E1E8F0;
+    --danger:#B4483C;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter', sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .app{
+    max-width:1080px;
+    margin:0 auto;
+    display:flex;
+    min-height:100vh;
+  }
+
+  .rail{
+    width:270px;
+    flex-shrink:0;
+    background:var(--rail);
+    border-right:1px solid var(--border);
+    padding:28px 18px 20px;
+    display:flex;
+    flex-direction:column;
+  }
+  .wordmark{
+    font-family:'Newsreader', serif;
+    font-size:19px;
+    font-weight:500;
+    letter-spacing:-0.01em;
+    color:var(--ink);
+    padding:0 6px;
+    margin-bottom:18px;
+    display:block;
+  }
+  .new-btn{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    width:100%;
+    font-family:'Inter', sans-serif;
+    font-size:13.5px;
+    font-weight:500;
+    color:var(--accent-deep);
+    background:var(--accent-soft);
+    border:1px solid transparent;
+    border-radius:9px;
+    padding:9px 12px;
+    cursor:pointer;
+    margin-bottom:14px;
+    transition: background 140ms ease;
+  }
+  .new-btn:hover{ background:#D9E7F5; }
+  .new-btn svg{ width:14px; height:14px; }
+
+  .search-input{
+    width:100%;
+    font-family:'Inter', sans-serif;
+    font-size:13px;
+    color:var(--ink);
+    background:var(--page);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:8px 10px;
+    margin-bottom:14px;
+    outline:none;
+  }
+  .search-input:focus{ border-color:var(--accent); }
+  .search-input::placeholder{ color:var(--muted); }
+
+  .rail-label{
+    font-size:12.5px;
+    color:var(--muted);
+    padding:0 6px;
+    margin-bottom:10px;
+  }
+  .rail-list{
+    flex:1;
+    overflow-y:auto;
+    margin-bottom:14px;
+  }
+  .entry{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:6px;
+    padding:11px 8px 11px 12px;
+    border-radius:10px;
+    margin-bottom:2px;
+    cursor:pointer;
+    transition: background 140ms ease;
+    outline:none;
+  }
+  .entry:hover{ background:rgba(59,110,165,0.06); }
+  .entry:focus-visible{ box-shadow:0 0 0 2px var(--accent); }
+  .entry.active{ background:var(--page); box-shadow: 0 1px 2px rgba(22,32,43,0.05), 0 1px 0 var(--border) inset; }
+  .entry-main{ min-width:0; }
+  .entry-title{
+    font-size:14px;
+    font-weight:500;
+    color:var(--ink);
+    margin-bottom:3px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .entry-meta{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:12px;
+    color:var(--muted);
+  }
+  .tag{
+    font-size:11px;
+    color:var(--accent-deep);
+    background:var(--accent-soft);
+    padding:2px 7px;
+    border-radius:999px;
+    white-space:nowrap;
+  }
+  .entry-actions{
+    display:flex;
+    gap:2px;
+    flex-shrink:0;
+  }
+  .icon-btn{
+    width:24px;
+    height:24px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:transparent;
+    border:none;
+    border-radius:6px;
+    color:var(--muted);
+    cursor:pointer;
+  }
+  .icon-btn:hover{ background:var(--accent-soft); color:var(--accent-deep); }
+  .icon-btn.del-btn:hover{ background:#F6E6E3; color:var(--danger); }
+  .icon-btn svg{ width:13px; height:13px; }
+
+  .rail-footer{
+    display:flex;
+    gap:8px;
+    padding-top:12px;
+    border-top:1px solid var(--border);
+  }
+  .ghost-btn{
+    flex:1;
+    font-family:'Inter', sans-serif;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    background:transparent;
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:7px 8px;
+    cursor:pointer;
+    transition: border-color 140ms ease, color 140ms ease;
+  }
+  .ghost-btn:hover{ border-color:var(--accent); color:var(--accent-deep); }
+
+  .page-wrap{
+    flex:1;
+    padding:48px 56px 60px;
+    min-width:0;
+  }
+
+  .sync-banner{
+    max-width:660px;
+    display:none;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    background:var(--accent-soft);
+    color:var(--accent-deep);
+    font-size:13px;
+    border-radius:10px;
+    padding:10px 14px;
+    margin-bottom:18px;
+  }
+  .sync-banner.show{ display:flex; }
+  .sync-banner button{
+    font-family:'Inter', sans-serif;
+    font-size:12.5px;
+    font-weight:500;
+    color:#fff;
+    background:var(--accent);
+    border:none;
+    border-radius:7px;
+    padding:6px 12px;
+    cursor:pointer;
+  }
+
+  .page-head{
+    max-width:660px;
+    margin-bottom:26px;
+  }
+  .title-input{
+    font-family:'Newsreader', serif;
+    font-size:30px;
+    font-weight:500;
+    letter-spacing:-0.01em;
+    color:var(--ink);
+    border:none;
+    outline:none;
+    background:transparent;
+    width:100%;
+    padding:0;
+    margin-bottom:10px;
+  }
+  .title-input::placeholder{ color:var(--muted); }
+
+  .meta-row{
+    display:flex;
+    align-items:center;
+    gap:14px;
+  }
+  .meta-row .tag{ font-size:12px; padding:4px 10px; }
+  .meta-text{
+    font-size:13px;
+    color:var(--muted);
+  }
+
+  .sheet{
+    max-width:660px;
+    background:var(--page);
+    border:1px solid var(--border);
+    border-radius:16px;
+    box-shadow: 0 1px 2px rgba(22,32,43,0.03), 0 10px 28px rgba(22,32,43,0.04);
+    padding:18px 26px 20px;
+    transition: box-shadow 200ms ease, border-color 200ms ease;
+  }
+  .sheet.is-focused{
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px rgba(59,110,165,0.10);
+  }
+
+  textarea{
+    width:100%;
+    max-width:70ch;
+    resize:none;
+    border:none;
+    outline:none;
+    background-image: repeating-linear-gradient(
+      transparent, transparent 26px,
+      var(--rule) 26px, var(--rule) 27px
+    );
+    font-family:'Inter', sans-serif;
+    font-size:17px;
+    line-height:27px;
+    color:var(--ink);
+    padding:0;
+    min-height:432px;
+    max-height:520px;
+    overflow-y:auto;
+    display:block;
+    transition: height 180ms cubic-bezier(.2,.7,.3,1);
+  }
+  @media (prefers-reduced-motion: reduce){
+    textarea{ transition:none; }
+  }
+  textarea::placeholder{ color:var(--muted); }
+
+  .sheet-footer{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-top:6px;
+    padding-top:14px;
+    border-top:1px solid var(--border);
+  }
+  .count{ font-size:13px; color:var(--muted); }
+
+  .copy-btn{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    font-family:'Inter', sans-serif;
+    font-size:13.5px;
+    color:var(--ink-soft);
+    background:transparent;
+    border:1px solid var(--border);
+    border-radius:9px;
+    padding:7px 13px;
+    cursor:pointer;
+    transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+  }
+  .copy-btn:hover{ border-color:var(--accent); color:var(--accent-deep); background:var(--accent-soft); }
+  .copy-btn svg{ width:14px; height:14px; }
+  .copy-btn.copied{ border-color:var(--accent); color:var(--accent-deep); background:var(--accent-soft); }
+
+  .toast{
+    position:fixed;
+    bottom:26px;
+    right:32px;
+    display:none;
+    align-items:center;
+    gap:12px;
+    background:var(--ink);
+    color:#fff;
+    font-size:13.5px;
+    border-radius:10px;
+    padding:11px 14px;
+    box-shadow:0 8px 24px rgba(22,32,43,0.25);
+  }
+  .toast.show{ display:flex; }
+  .toast button{
+    font-family:'Inter', sans-serif;
+    font-size:13px;
+    font-weight:500;
+    color:#fff;
+    background:rgba(255,255,255,0.15);
+    border:none;
+    border-radius:7px;
+    padding:5px 10px;
+    cursor:pointer;
+  }
+  .toast button:hover{ background:rgba(255,255,255,0.25); }
+
+  @media (max-width:760px){
+    .app{ flex-direction:column; }
+    .rail{ width:100%; border-right:none; border-bottom:1px solid var(--border); }
+    .page-wrap{ padding:32px 22px 48px; }
+    .title-input{ font-size:26px; }
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <aside class="rail">
+      <span class="wordmark">Prompt Loom</span>
+      <button class="new-btn" id="newBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        New prompt
+      </button>
+      <input class="search-input" id="searchInput" placeholder="Filter entries…" aria-label="Filter entries">
+      <div class="rail-label">Entries</div>
+      <div class="rail-list" id="entryList" role="listbox" aria-label="Prompt entries"></div>
+      <div class="rail-footer">
+        <button class="ghost-btn" id="exportBtn">Export</button>
+        <button class="ghost-btn" id="importBtn">Import</button>
+        <input type="file" id="importFile" accept="application/json" style="display:none">
+      </div>
+    </aside>
+
+    <main class="page-wrap">
+      <div class="sync-banner" id="syncBanner">
+        <span>This notebook changed in another tab.</span>
+        <button id="syncReloadBtn">Reload</button>
+      </div>
+
+      <div class="page-head">
+        <input class="title-input" id="titleInput" placeholder="Untitled prompt">
+        <div class="meta-row">
+          <span class="tag" id="activeTag">draft</span>
+          <span class="meta-text" id="metaText">Saved</span>
+        </div>
+      </div>
+
+      <div class="sheet" id="sheet">
+        <textarea id="promptInput" placeholder="Write the system prompt out in full — identity, scope, tools, and the rules it should never break…"></textarea>
+        <div class="sheet-footer">
+          <span class="count" id="count">0 words</span>
+          <button class="copy-btn" id="copyBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+            <span id="copyLabel">Copy</span>
+          </button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast">
+    <span id="toastText">Deleted</span>
+    <button id="toastUndo">Undo</button>
+  </div>
+
+<script>
+  const STORAGE_KEY = 'loom.entries';
+
+  const seedEntries = [
+    { id: 'seed-checkout', title: 'Checkout Assistant', tag: 'v2', body: 'You are the checkout assistant. Scope: cart questions, shipping estimates, promo code validity. Never apply a discount code yourself — call validate_promo(code) and report the result.\n\nTone: brief, transactional, no upsell language.\n\nEscalate to a human for any payment failure that repeats twice.', updatedAt: Date.now() - 5*86400000 },
+    { id: 'seed-moderator', title: 'Content Moderator', tag: 'v1', body: 'You are a first-pass content moderator. Classify each submission as allow, review, or block, using the attached policy. Do not explain your reasoning to the end user — only return the classification and a one-line internal note for the human reviewer.', updatedAt: Date.now() - 7*86400000 },
+    { id: 'seed-support', title: 'Support Agent', tag: 'v3', body: "You are the support agent embedded in the product's help center. Identity: a calm, competent teammate — not a mascot, not a script reader.\n\nTone: plain, direct sentences. No exclamation points. No apologizing more than once per issue.\n\nScope: order status, billing questions, and basic troubleshooting for the desktop and mobile apps. Anything involving refunds over $200, account deletion, or legal requests gets escalated — do not attempt to resolve these yourself.\n\nTools available: order_lookup(order_id), refund_issue(order_id, amount) — capped at $200, escalation_create(reason, priority).\n\nEscalation trigger: if the user expresses frustration twice in a row, or asks for a human explicitly, call escalation_create immediately and tell them a person will follow up within one business day.\n\nFormatting: reply in plain sentences, no markdown, no bullet lists unless the user is comparing three or more options.\n\nNever promise a refund amount before refund_issue confirms it. Never invent an order status. Never reference internal tool names to the user.", updatedAt: Date.now() - 2*60000 },
+    { id: 'seed-onboarding', title: 'Onboarding Copilot', tag: 'draft', body: 'Draft — not yet reviewed.\n\nYou walk a new user through initial setup, one step at a time. Wait for confirmation before moving to the next step. If they get stuck twice on the same step, offer to skip it and flag it in the summary at the end.', updatedAt: Date.now() - 14*86400000 },
+  ];
+
+  let entries = [];
+  let activeId = null;
+  let saveTimer = null;
+  let storageOK = true;
+  let searchQuery = '';
+  let pendingDelete = null;
+  let toastTimer = null;
+  let suppressStorageEvent = false;
+
+  const railList = document.getElementById('entryList');
+  const titleInput = document.getElementById('titleInput');
+  const tagEl = document.getElementById('activeTag');
+  const metaText = document.getElementById('metaText');
+  const textarea = document.getElementById('promptInput');
+  const sheet = document.getElementById('sheet');
+  const count = document.getElementById('count');
+  const copyBtn = document.getElementById('copyBtn');
+  const copyLabel = document.getElementById('copyLabel');
+  const newBtn = document.getElementById('newBtn');
+  const searchInput = document.getElementById('searchInput');
+  const exportBtn = document.getElementById('exportBtn');
+  const importBtn = document.getElementById('importBtn');
+  const importFile = document.getElementById('importFile');
+  const syncBanner = document.getElementById('syncBanner');
+  const syncReloadBtn = document.getElementById('syncReloadBtn');
+  const toast = document.getElementById('toast');
+  const toastText = document.getElementById('toastText');
+  const toastUndo = document.getElementById('toastUndo');
+
+  function loadEntries(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      entries = raw ? JSON.parse(raw) : null;
+    } catch(e){
+      storageOK = false;
+      entries = null;
+    }
+    if(!entries || !entries.length){
+      entries = seedEntries;
+      persist();
+    }
+    if(!entries.find(e => e.id === activeId)) activeId = entries[0].id;
+    render();
+    if(!storageOK) metaText.textContent = 'Not saving — storage unavailable';
+  }
+
+  function persist(){
+    try{
+      suppressStorageEvent = true;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+      setTimeout(() => { suppressStorageEvent = false; }, 50);
+    } catch(e){
+      storageOK = false;
+    }
+  }
+
+  function relTime(ts){
+    const diff = Date.now() - ts;
+    const mins = Math.round(diff/60000);
+    if(mins < 1) return 'Just now';
+    if(mins < 60) return mins + 'm ago';
+    const hrs = Math.round(mins/60);
+    if(hrs < 24) return hrs + 'h ago';
+    const days = Math.round(hrs/24);
+    return days + 'd ago';
+  }
+
+  function escapeHtml(s){
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function render(){
+    railList.innerHTML = '';
+    const q = searchQuery.trim().toLowerCase();
+    const visible = q ? entries.filter(e => (e.title || '').toLowerCase().includes(q)) : entries;
+
+    visible.forEach(entry => {
+      const div = document.createElement('div');
+      div.className = 'entry' + (entry.id === activeId ? ' active' : '');
+      div.setAttribute('role', 'option');
+      div.setAttribute('aria-selected', entry.id === activeId ? 'true' : 'false');
+      div.setAttribute('tabindex', '0');
+      div.dataset.id = entry.id;
+      div.innerHTML =
+        '<div class="entry-main">' +
+          '<div class="entry-title">' + escapeHtml(entry.title || 'Untitled prompt') + '</div>' +
+          '<div class="entry-meta"><span class="tag">' + escapeHtml(entry.tag || 'draft') + '</span><span>' + relTime(entry.updatedAt) + '</span></div>' +
+        '</div>' +
+        '<div class="entry-actions">' +
+          '<button class="icon-btn dup-btn" aria-label="Duplicate ' + escapeHtml(entry.title || 'entry') + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>' +
+          '<button class="icon-btn del-btn" aria-label="Delete ' + escapeHtml(entry.title || 'entry') + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></button>' +
+        '</div>';
+
+      div.addEventListener('click', () => { activeId = entry.id; render(); });
+      div.querySelector('.dup-btn').addEventListener('click', (e) => { e.stopPropagation(); duplicateEntry(entry.id); });
+      div.querySelector('.del-btn').addEventListener('click', (e) => { e.stopPropagation(); deleteEntry(entry.id); });
+
+      railList.appendChild(div);
+    });
+
+    const active = entries.find(e => e.id === activeId);
+    if(active){
+      titleInput.value = active.title;
+      tagEl.textContent = active.tag || 'draft';
+      textarea.value = active.body || '';
+      if(storageOK) metaText.textContent = 'Saved ' + relTime(active.updatedAt);
+      autoGrow();
+      updateCount();
+    }
+  }
+
+  function scheduleSave(){
+    if(storageOK) metaText.textContent = 'Saving…';
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      const active = entries.find(e => e.id === activeId);
+      if(active) active.updatedAt = Date.now();
+      persist();
+      if(storageOK) metaText.textContent = 'Saved just now';
+    }, 600);
+  }
+
+  titleInput.addEventListener('input', () => {
+    const active = entries.find(e => e.id === activeId);
+    if(active) active.title = titleInput.value;
+    const row = railList.querySelector('.entry[data-id="' + activeId + '"] .entry-title');
+    if(row) row.textContent = titleInput.value || 'Untitled prompt';
+    scheduleSave();
+  });
+
+  textarea.addEventListener('input', () => {
+    const active = entries.find(e => e.id === activeId);
+    if(active) active.body = textarea.value;
+    autoGrow();
+    updateCount();
+    scheduleSave();
+  });
+
+  newBtn.addEventListener('click', () => {
+    const id = 'entry-' + Date.now();
+    const fresh = { id, title: 'Untitled prompt', tag: 'draft', body: '', updatedAt: Date.now() };
+    entries.unshift(fresh);
+    activeId = id;
+    persist();
+    render();
+    titleInput.focus();
+    titleInput.select();
+  });
+
+  function duplicateEntry(id){
+    const src = entries.find(e => e.id === id);
+    if(!src) return;
+    const copy = { id: 'entry-' + Date.now(), title: src.title + ' copy', tag: src.tag, body: src.body, updatedAt: Date.now() };
+    const idx = entries.findIndex(e => e.id === id);
+    entries.splice(idx + 1, 0, copy);
+    activeId = copy.id;
+    persist();
+    render();
+  }
+
+  function deleteEntry(id){
+    const idx = entries.findIndex(e => e.id === id);
+    if(idx === -1) return;
+    const [removed] = entries.splice(idx, 1);
+    pendingDelete = { entry: removed, index: idx };
+    if(activeId === id) activeId = entries.length ? entries[Math.min(idx, entries.length - 1)].id : null;
+    persist();
+    render();
+    showToast('Deleted "' + (removed.title || 'Untitled prompt') + '"');
+  }
+
+  function showToast(msg){
+    toastText.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toast.classList.remove('show'); pendingDelete = null; }, 6000);
+  }
+
+  toastUndo.addEventListener('click', () => {
+    if(!pendingDelete) return;
+    entries.splice(pendingDelete.index, 0, pendingDelete.entry);
+    activeId = pendingDelete.entry.id;
+    pendingDelete = null;
+    clearTimeout(toastTimer);
+    toast.classList.remove('show');
+    persist();
+    render();
+  });
+
+  searchInput.addEventListener('input', () => {
+    searchQuery = searchInput.value;
+    render();
+  });
+
+  railList.addEventListener('keydown', (e) => {
+    const items = [...railList.querySelectorAll('.entry')];
+    const current = document.activeElement.closest ? document.activeElement.closest('.entry') : null;
+    const idx = items.indexOf(current);
+    if(e.key === 'ArrowDown'){
+      e.preventDefault();
+      const next = items[idx < 0 ? 0 : Math.min(items.length - 1, idx + 1)];
+      if(next) next.focus();
+    } else if(e.key === 'ArrowUp'){
+      e.preventDefault();
+      const prev = items[Math.max(0, idx - 1)];
+      if(prev) prev.focus();
+    } else if((e.key === 'Enter' || e.key === ' ') && current){
+      e.preventDefault();
+      current.click();
+    }
+  });
+
+  exportBtn.addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(entries, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'promptloom-export.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  importBtn.addEventListener('click', () => importFile.click());
+  importFile.addEventListener('change', () => {
+    const file = importFile.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const imported = JSON.parse(reader.result);
+        if(!Array.isArray(imported)) throw new Error('not an array');
+        const withNewIds = imported.map(e => ({
+          id: 'entry-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+          title: e.title || 'Untitled prompt',
+          tag: e.tag || 'draft',
+          body: e.body || '',
+          updatedAt: Date.now()
+        }));
+        entries = withNewIds.concat(entries);
+        activeId = withNewIds[0] ? withNewIds[0].id : activeId;
+        persist();
+        render();
+      } catch(err){
+        alert('Could not read that file — expected a Loom export in JSON format.');
+      }
+      importFile.value = '';
+    };
+    reader.readAsText(file);
+  });
+
+  window.addEventListener('storage', (e) => {
+    if(e.key !== STORAGE_KEY || suppressStorageEvent) return;
+    syncBanner.classList.add('show');
+  });
+  syncReloadBtn.addEventListener('click', () => {
+    syncBanner.classList.remove('show');
+    loadEntries();
+  });
+
+  function autoGrow(){
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
+  }
+  function updateCount(){
+    const text = textarea.value.trim();
+    const words = text.length ? text.split(/\s+/).length : 0;
+    const tokens = text.length ? Math.round(text.length / 4) : 0;
+    count.textContent = words + (words === 1 ? ' word' : ' words') + ' · ~' + tokens + ' tokens';
+  }
+
+  textarea.addEventListener('focus', () => sheet.classList.add('is-focused'));
+  textarea.addEventListener('blur', () => sheet.classList.remove('is-focused'));
+
+  copyBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(textarea.value).then(() => {
+      copyLabel.textContent = 'Copied';
+      copyBtn.classList.add('copied');
+      setTimeout(() => { copyLabel.textContent = 'Copy'; copyBtn.classList.remove('copied'); }, 1400);
+    });
+  });
+
+  loadEntries();
+</script>
+</body>
+</html>
