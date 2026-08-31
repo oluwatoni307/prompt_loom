@@ -1,4 +1,4 @@
-# PromptLoom
+# Prompt Loom
 
 A notebook-style UI for writing production system prompts — not a chat playground. Prompts here are things you keep, reread, and version, not things you fire off and forget.
 
