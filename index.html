@@ -235,6 +235,7 @@
     margin-bottom:10px;
   }
   .title-input::placeholder{ color:var(--muted); }
+  .title-input:disabled, textarea:disabled{ color:var(--muted); cursor:default; }
 
   .meta-row{
     display:flex;
@@ -314,6 +315,7 @@
   .copy-btn:hover{ border-color:var(--accent); color:var(--accent-deep); background:var(--accent-soft); }
   .copy-btn svg{ width:14px; height:14px; }
   .copy-btn.copied{ border-color:var(--accent); color:var(--accent-deep); background:var(--accent-soft); }
+  .copy-btn:disabled{ cursor:default; opacity:0.5; }
 
   .toast{
     position:fixed;
@@ -354,7 +356,7 @@
 <body>
   <div class="app">
     <aside class="rail">
-      <span class="wordmark">Prompt Loom</span>
+      <span class="wordmark">PromptLoom</span>
       <button class="new-btn" id="newBtn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
         New prompt
@@ -404,12 +406,15 @@
 <script>
   const STORAGE_KEY = 'loom.entries';
 
-  const seedEntries = [
-    { id: 'seed-checkout', title: 'Checkout Assistant', tag: 'v2', body: 'You are the checkout assistant. Scope: cart questions, shipping estimates, promo code validity. Never apply a discount code yourself — call validate_promo(code) and report the result.\n\nTone: brief, transactional, no upsell language.\n\nEscalate to a human for any payment failure that repeats twice.', updatedAt: Date.now() - 5*86400000 },
-    { id: 'seed-moderator', title: 'Content Moderator', tag: 'v1', body: 'You are a first-pass content moderator. Classify each submission as allow, review, or block, using the attached policy. Do not explain your reasoning to the end user — only return the classification and a one-line internal note for the human reviewer.', updatedAt: Date.now() - 7*86400000 },
-    { id: 'seed-support', title: 'Support Agent', tag: 'v3', body: "You are the support agent embedded in the product's help center. Identity: a calm, competent teammate — not a mascot, not a script reader.\n\nTone: plain, direct sentences. No exclamation points. No apologizing more than once per issue.\n\nScope: order status, billing questions, and basic troubleshooting for the desktop and mobile apps. Anything involving refunds over $200, account deletion, or legal requests gets escalated — do not attempt to resolve these yourself.\n\nTools available: order_lookup(order_id), refund_issue(order_id, amount) — capped at $200, escalation_create(reason, priority).\n\nEscalation trigger: if the user expresses frustration twice in a row, or asks for a human explicitly, call escalation_create immediately and tell them a person will follow up within one business day.\n\nFormatting: reply in plain sentences, no markdown, no bullet lists unless the user is comparing three or more options.\n\nNever promise a refund amount before refund_issue confirms it. Never invent an order status. Never reference internal tool names to the user.", updatedAt: Date.now() - 2*60000 },
-    { id: 'seed-onboarding', title: 'Onboarding Copilot', tag: 'draft', body: 'Draft — not yet reviewed.\n\nYou walk a new user through initial setup, one step at a time. Wait for confirmation before moving to the next step. If they get stuck twice on the same step, offer to skip it and flag it in the summary at the end.', updatedAt: Date.now() - 14*86400000 },
-  ];
+  function makeTemplate(){
+    return {
+      id: 'template-' + Date.now(),
+      title: 'Support Agent',
+      tag: 'template',
+      body: "You are the support agent embedded in the product's help center. Identity: a calm, competent teammate — not a mascot, not a script reader.\n\nTone: plain, direct sentences. No exclamation points. No apologizing more than once per issue.\n\nScope: order status, billing questions, and basic troubleshooting for the desktop and mobile apps. Anything involving refunds over $200, account deletion, or legal requests gets escalated — do not attempt to resolve these yourself.\n\nTools available: order_lookup(order_id), refund_issue(order_id, amount) — capped at $200, escalation_create(reason, priority).\n\nEscalation trigger: if the user expresses frustration twice in a row, or asks for a human explicitly, call escalation_create immediately and tell them a person will follow up within one business day.\n\nFormatting: reply in plain sentences, no markdown, no bullet lists unless the user is comparing three or more options.\n\nNever promise a refund amount before refund_issue confirms it. Never invent an order status. Never reference internal tool names to the user.",
+      updatedAt: Date.now()
+    };
+  }
 
   let entries = [];
   let activeId = null;
@@ -440,6 +445,9 @@
   const toastText = document.getElementById('toastText');
   const toastUndo = document.getElementById('toastUndo');
 
+  const DEFAULT_PROMPT_PLACEHOLDER = textarea.placeholder;
+  const EMPTY_PROMPT_PLACEHOLDER = 'No prompts yet — click "New prompt" to start writing.';
+
   function loadEntries(){
     try{
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -448,11 +456,15 @@
       storageOK = false;
       entries = null;
     }
-    if(!entries || !entries.length){
-      entries = seedEntries;
+    if(!entries){
+      entries = [makeTemplate()];
       persist();
     }
-    if(!entries.find(e => e.id === activeId)) activeId = entries[0].id;
+    if(!entries.length){
+      activeId = null;
+    } else if(!entries.find(e => e.id === activeId)){
+      activeId = entries[0].id;
+    }
     render();
     if(!storageOK) metaText.textContent = 'Not saving — storage unavailable';
   }
@@ -516,22 +528,37 @@
     const active = entries.find(e => e.id === activeId);
     if(active){
       titleInput.value = active.title;
+      titleInput.disabled = false;
       tagEl.textContent = active.tag || 'draft';
       textarea.value = active.body || '';
+      textarea.disabled = false;
+      textarea.placeholder = DEFAULT_PROMPT_PLACEHOLDER;
+      copyBtn.disabled = false;
       if(storageOK) metaText.textContent = 'Saved ' + relTime(active.updatedAt);
       autoGrow();
       updateCount();
+    } else {
+      titleInput.value = '';
+      titleInput.disabled = true;
+      tagEl.textContent = '';
+      textarea.value = '';
+      textarea.disabled = true;
+      textarea.placeholder = EMPTY_PROMPT_PLACEHOLDER;
+      copyBtn.disabled = true;
+      metaText.textContent = '';
+      count.textContent = '0 words';
+      autoGrow();
     }
   }
 
-  function scheduleSave(){
+  function scheduleSave(id){
     if(storageOK) metaText.textContent = 'Saving…';
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
-      const active = entries.find(e => e.id === activeId);
+      const active = entries.find(e => e.id === id);
       if(active) active.updatedAt = Date.now();
       persist();
-      if(storageOK) metaText.textContent = 'Saved just now';
+      if(storageOK && id === activeId) metaText.textContent = 'Saved just now';
     }, 600);
   }
 
@@ -540,7 +567,7 @@
     if(active) active.title = titleInput.value;
     const row = railList.querySelector('.entry[data-id="' + activeId + '"] .entry-title');
     if(row) row.textContent = titleInput.value || 'Untitled prompt';
-    scheduleSave();
+    scheduleSave(activeId);
   });
 
   textarea.addEventListener('input', () => {
@@ -548,7 +575,7 @@
     if(active) active.body = textarea.value;
     autoGrow();
     updateCount();
-    scheduleSave();
+    scheduleSave(activeId);
   });
 
   newBtn.addEventListener('click', () => {
@@ -656,7 +683,7 @@
         persist();
         render();
       } catch(err){
-        alert('Could not read that file — expected a Loom export in JSON format.');
+        alert('Could not read that file — expected a PromptLoom export in JSON format.');
       }
       importFile.value = '';
     };
